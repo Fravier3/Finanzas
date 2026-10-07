@@ -1,0 +1,1 @@
+# Finanzas\n\nAplicación de finanzas personales para iPhone. Proyecto en construcción; el código completo se publica en el siguiente commit.
