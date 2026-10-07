@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {dates,charges,actualPayments,saved,monthly,savingMonthly,validWorkspace,cancelSubscription} from '../lib/finance.ts';
-import {PrivateSessionStorage} from '../lib/private-session.ts';
+import {PrivateSessionStorage,installSessionLifecycle} from '../lib/private-session.ts';
+import {thisDeviceOptions,decodeBase64url,encodeBase64url} from '../lib/passkey-options.ts';
 const p={id:'p',start:'2026-01-31',end:null,amount:20,cycle:'monthly',day:31,card:'Chase'};
 const i={id:'i',name:'Servicio',kind:'subscription',color:'#315cf5',variable:false,notes:'',periods:[p],savings:[],payments:[]};
 assert.equal(dates(p,2026)[1],'2026-02-28');assert.equal(dates({...p,start:'2024-01-31'},2024)[1],'2024-02-29');
@@ -33,7 +34,7 @@ assert.throws(()=>cancelSubscription({...beforeCancellation,payments:[{...octobe
 const annualSameDay=cancelSubscription({...beforeCancellation,periods:[{...p,start:'2025-10-07',day:7,amount:120,cycle:'annual'}]},'2026-10-07',120,'2026-10-07');
 assert.equal(saved(annualSameDay,2026,'2026-12-31'),0);
 assert.equal(saved(annualSameDay,2027,'2027-10-07'),120);
-// Background/close erases credentials synchronously, including late responses.
+// Explicit close erases credentials synchronously, including late responses.
 const memory=new PrivateSessionStorage();
 const firstGeneration=memory.beginAuthentication();memory.setItem('auth','test-session');
 assert.equal(memory.getItem('auth'),'test-session');memory.lock();
@@ -46,4 +47,17 @@ assert.equal(memory.isCurrent(secondGeneration),false);
 memory.beginAuthentication();memory.ceremonies++;memory.lock(true);
 assert.equal(memory.getItem('auth'),null);assert.equal(memory.locked,true);
 assert.equal(new PrivateSessionStorage().getItem('auth'),null);
-console.log('Pruebas financieras y de sesión verificadas: cancelación el día del pago, ahorro mensual/anual, cierre, respuestas tardías y Face ID.');
+const lifecycle=new EventTarget(),liveSession=new PrivateSessionStorage();
+liveSession.setItem('auth','live-session');const uninstall=installSessionLifecycle(lifecycle,()=>liveSession.lock(true));
+lifecycle.dispatchEvent(new Event('visibilitychange'));
+assert.equal(liveSession.getItem('auth'),'live-session');
+const cached=new Event('pagehide');Object.defineProperty(cached,'persisted',{value:true});lifecycle.dispatchEvent(cached);
+assert.equal(liveSession.getItem('auth'),'live-session');
+lifecycle.dispatchEvent(new Event('pagehide'));assert.equal(liveSession.getItem('auth'),null);uninstall();
+liveSession.beginAuthentication();liveSession.setItem('auth','cleanup-check');lifecycle.dispatchEvent(new Event('pagehide'));
+assert.equal(liveSession.getItem('auth'),'cleanup-check');
+const options=thisDeviceOptions({challenge:'AQID_w',rp:{id:'fravier3.github.io',name:'Finanzas'},user:{id:'BAUG',name:'test',displayName:'Test'},pubKeyCredParams:[{type:'public-key',alg:-7}],excludeCredentials:[{id:'BwgJ',type:'public-key'}],authenticatorSelection:{authenticatorAttachment:'cross-platform'}});
+assert.equal(options.rp.id,'fravier3.github.io');assert.deepEqual([...new Uint8Array(options.challenge)],[1,2,3,255]);
+assert.equal(options.authenticatorSelection.authenticatorAttachment,'platform');assert.equal(options.authenticatorSelection.residentKey,'required');assert.equal(options.authenticatorSelection.userVerification,'required');
+assert.equal(encodeBase64url(options.excludeCredentials[0].id),'BwgJ');assert.equal(encodeBase64url(decodeBase64url('AQID_w')),'AQID_w');
+console.log('Pruebas verificadas: finanzas, cancelación, sesión conservada al cambiar de app/bfcache, cierre real y opciones de clave del dispositivo.');

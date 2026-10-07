@@ -10,7 +10,7 @@ App web para iPhone y escritorio, en español y USD. Suscripciones, pagos recurr
 4. Un pago puede corregirse en cantidad, fecha prevista, fecha real, tarjeta, nota y estado. El total anual usa **la fecha real del pago**, hasta el mes seleccionado o hasta hoy si ese mes aún no ha terminado.
 5. Los recibos variables permiten registrar un importe distinto cada mes. «Cambiar tarifa» comienza un calendario nuevo sin modificar los pagos confirmados anteriores.
 6. «Ahorrar» registra una cancelación hecha con el proveedor. Conserva el historial, incluido un pago hecho el mismo día. Ese pago no cuenta como ahorro: se suman únicamente los cobros evitados. Reactivar cierra ese período de ahorro.
-7. La sesión vive únicamente en memoria. Se borra al salir, cambiar de app, cerrar la pestaña o recargar. Se recuerda solo el correo, nunca la contraseña ni los tokens. Activa una clave de acceso una vez en Mi cuenta para entrar con Face ID después. El diálogo de claves de acceso no provoca un cierre de sesión accidental. Las operaciones pendientes no pueden volver a mostrar datos después del bloqueo.
+7. La sesión vive únicamente en memoria y permanece al cambiar temporalmente a Mensajes u otra app, cambiar de pestaña o suspender la página. No se cierra por visibilitychange ni al conservarse la página en bfcache. Una página realmente descartada, una recarga, un proceso terminado o el botón Cerrar sesión requieren iniciar sesión de nuevo. iOS no notifica siempre el cierre definitivo y puede descartar una app en segundo plano; por eso una recarga por el sistema también pierde la sesión. Se recuerda solo el correo, nunca la contraseña ni los tokens. Las operaciones pendientes no pueden volver a mostrar datos después del bloqueo.
 7. El costo mensual es equivalente: los cargos anuales se dividen entre 12. El ahorro acumulado por una suscripción anual aparece cuando se evita su renovación, no cada mes.
 8. En «Mi cuenta» se exportan CSV y respaldos JSON. Importar reemplaza el espacio actual, con confirmación.
 
@@ -36,7 +36,9 @@ El hosting es **GitHub Pages**: https://fravier3.github.io/Finanzas/. El workflo
 
 ### Face ID
 
-Después del primer acceso con correo y contraseña, abrir Mi cuenta en el iPhone y pulsar Activar Face ID / clave de acceso. Guardar la clave en Contraseñas de iCloud. Después puede usarse Entrar con Face ID / clave de acceso. Se usa WebAuthn validado por Supabase, con RP ID `fravier3.github.io` y origen `https://fravier3.github.io`. Face ID, Touch ID o el código son seleccionados por el dispositivo. Supabase marca esta funcionalidad como experimental. No se guardan contraseñas para simular autenticación biométrica.
+Después del primer acceso con correo y contraseña, abrir Mi cuenta en el iPhone y pulsar Crear clave en este dispositivo. Guardar la clave en Contraseñas de iCloud. Después puede usarse Entrar con Face ID / clave de acceso. Se usa WebAuthn validado por Supabase, con RP ID `fravier3.github.io` y origen `https://fravier3.github.io`. Face ID, Touch ID o el código son seleccionados por el dispositivo. Supabase marca esta funcionalidad como experimental. No se guardan contraseñas para simular autenticación biométrica.
+
+La opción «Crear clave en este dispositivo» usa la API de registro en dos pasos de Supabase y solicita authenticatorAttachment=platform, residentKey=required y userVerification=required. Mantiene el desafío, RP y verificación de Supabase; no se simula Face ID. Como alternativa, la ayuda en acceso y cuenta explica cómo guardar la contraseña existente en Contraseñas de iPhone y autorizar el autocompletado con Face ID. Una página web no puede abrir directamente el aviso biométrico de AutoFill: el usuario selecciona la contraseña desde el campo/teclado y iOS determina Face ID o código.
 
 ## Validación
 

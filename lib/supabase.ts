@@ -16,11 +16,10 @@ export async function authenticate<T>(action:()=>Promise<T>,passkey=false):Promi
   if(passkey)privateSession.ceremonies++;
   try {
     const result=await action();
-    if(!privateSession.isCurrent(generation))throw Error('La app se cerró o pasó a segundo plano. Vuelve a entrar.');
+    if(!privateSession.isCurrent(generation))throw Error('La app se cerró. Vuelve a entrar.');
     return result;
   } finally {
     authActionPending=false;
     if(passkey)privateSession.ceremonies--;
-    if(document.visibilityState==='hidden')window.dispatchEvent(new Event('finanzas-lock'));
   }
 }
