@@ -26,12 +26,16 @@ El esquema completo está en `supabase/schema.sql`, ya aplicado al proyecto **Fi
 - React 19, TypeScript, Vinext/Vite, Recharts, Lucide y Supabase JS (versión exacta).
 - Node 22.13 o superior y pnpm con el lockfile incluido.
 - `pnpm install --frozen-lockfile`
-- `pnpm dev`
-- `pnpm build`
+- `pnpm dev:pages`
+- `pnpm build:pages`
 - `node --experimental-strip-types tests/finance.test.mjs`
 - `node node_modules/typescript/bin/tsc --noEmit`
 
-El hosting Sites usa `.openai/hosting.json`. El mismo proyecto está publicado de forma privada para el propietario en ChatGPT; Supabase protege además los datos por cuenta. No añadir secretos al repositorio público.
+El hosting es **GitHub Pages**: https://fravier3.github.io/Finanzas/. El workflow `.github/workflows/pages.yml` compila y publica cada cambio en main. Supabase protege los datos por cuenta; la página pública no revela los registros financieros. No añadir secretos al repositorio público.
+
+### Face ID
+
+Después del primer acceso con correo y contraseña, abrir Mi cuenta en el iPhone y pulsar Activar Face ID / clave de acceso. Guardar la clave en Contraseñas de iCloud. Después puede usarse Entrar con Face ID / clave de acceso. Se usa WebAuthn validado por Supabase, con RP ID `fravier3.github.io` y origen `https://fravier3.github.io`. Face ID, Touch ID o el código son seleccionados por el dispositivo. Supabase marca esta funcionalidad como experimental. No se guardan contraseñas para simular autenticación biométrica.
 
 ## Validación
 
