@@ -9,7 +9,8 @@ App web para iPhone y escritorio, en español y USD. Suscripciones, pagos recurr
 3. Los cargos del calendario son **previstos**, no transacciones bancarias. Para contarlos como pagados, confirmar individualmente o confirmar los cargos vencidos. Al crear un servicio, hay una casilla opcional para confirmar los pagos anteriores del año elegido.
 4. Un pago puede corregirse en cantidad, fecha prevista, fecha real, tarjeta, nota y estado. El total anual usa **la fecha real del pago**, hasta el mes seleccionado o hasta hoy si ese mes aún no ha terminado.
 5. Los recibos variables permiten registrar un importe distinto cada mes. «Cambiar tarifa» comienza un calendario nuevo sin modificar los pagos confirmados anteriores.
-6. «Ahorrar» registra una cancelación hecha con el proveedor. Conserva el historial y cuenta los cargos evitados desde la fecha efectiva. Reactivar cierra ese período de ahorro.
+6. «Ahorrar» registra una cancelación hecha con el proveedor. Conserva el historial, incluido un pago hecho el mismo día. Ese pago no cuenta como ahorro: se suman únicamente los cobros evitados. Reactivar cierra ese período de ahorro.
+7. La sesión vive únicamente en memoria. Se borra al salir, cambiar de app, cerrar la pestaña o recargar. Se recuerda solo el correo, nunca la contraseña ni los tokens. Activa una clave de acceso una vez en Mi cuenta para entrar con Face ID después. El diálogo de claves de acceso no provoca un cierre de sesión accidental. Las operaciones pendientes no pueden volver a mostrar datos después del bloqueo.
 7. El costo mensual es equivalente: los cargos anuales se dividen entre 12. El ahorro acumulado por una suscripción anual aparece cuando se evita su renovación, no cada mes.
 8. En «Mi cuenta» se exportan CSV y respaldos JSON. Importar reemplaza el espacio actual, con confirmación.
 
