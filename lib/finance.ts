@@ -1,0 +1,24 @@
+export type Period = {id:string; start:string; end:string|null; amount:number; cycle:'monthly'|'annual'; day:number; card:string};
+export type Payment = {id:string; due:string; date:string; amount:number; card:string; status:'paid'|'pending'|'skipped'; note:string};
+export type Saving = {id:string; from:string; to:string|null; amount:number; cycle:'monthly'|'annual'; day:number; anchor:string};
+export type Item = {id:string; name:string; kind:'subscription'|'bill'; color:string; notes:string; variable:boolean; periods:Period[]; savings:Saving[]; payments:Payment[]};
+export type Workspace = {items:Item[]};
+export type Charge = Payment & {itemId:string; name:string; kind:Item['kind']; color:string; estimated:boolean};
+export const months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+export const money=(n:number)=>new Intl.NumberFormat('es-PR',{style:'currency',currency:'USD'}).format(n);
+export function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+export const uid=()=>crypto.randomUUID();
+export const sum=(a:number[])=>Math.round(a.reduce((x,y)=>x+y,0)*100)/100;
+export function dateFor(y:number,m:number,day:number){return `${y}-${String(m+1).padStart(2,'0')}-${String(Math.min(day,new Date(y,m+1,0).getDate())).padStart(2,'0')}`;}
+export function dates(p:Period,year:number){return Array.from({length:12},(_,m)=>dateFor(year,m,p.day)).filter(d=>d>=p.start&&(!p.end||d<p.end)&&(p.cycle==='monthly'||Number(d.slice(5,7))===Number(p.start.slice(5,7))));}
+export function charges(item:Item,year:number):Charge[]{const map=new Map<string,Charge>();const extra={itemId:item.id,name:item.name,kind:item.kind,color:item.color};for(const p of item.periods)for(const due of dates(p,year))map.set(due,{...extra,id:due,due,date:due,amount:p.amount,card:p.card,status:'pending',note:'',estimated:true});for(const p of item.payments)if(Number(p.due.slice(0,4))===year)map.set(p.due,{...p,...extra,estimated:false});return [...map.values()].sort((a,b)=>a.due.localeCompare(b.due));}
+export function paidThrough(items:Item[],year:number,cutoff:string){return items.flatMap(i=>charges(i,year)).filter(p=>p.status==='paid'&&p.date<=cutoff&&Number(p.date.slice(0,4))===year);}
+// Payments can be posted in a different year from their scheduled due date.
+export function actualPayments(items:Item[],year:number,cutoff:string){return items.flatMap(i=>i.payments.filter(p=>p.status==='paid'&&Number(p.date.slice(0,4))===year&&p.date<=cutoff).map(p=>({...p,itemId:i.id,name:i.name,kind:i.kind,color:i.color,estimated:false})));}
+export function currentPeriod(i:Item,date=today()){return [...i.periods].reverse().find(p=>p.start<=date&&(!p.end||date<p.end));}
+export function monthly(i:Item,date=today()){const p=currentPeriod(i,date);return p?p.amount/(p.cycle==='annual'?12:1):0;}
+export function savingDates(s:Saving,year:number){return dates({id:s.id,start:s.anchor,end:s.to,amount:s.amount,cycle:s.cycle,day:s.day,card:''},year).filter(d=>d>=s.from);}
+export function saved(i:Item,year:number,cutoff:string){return sum(i.savings.flatMap(s=>savingDates(s,year).filter(d=>d<=cutoff).map(()=>s.amount)));}
+export function savingMonthly(i:Item,date=today()){const s=i.savings.find(s=>s.from<=date&&(!s.to||date<s.to));return s?s.amount/(s.cycle==='annual'?12:1):0;}
+export function isSaving(i:Item){return i.savings.some(s=>!s.to);}
+export function validWorkspace(input:unknown):input is Workspace{if(!input||typeof input!=='object'||!Array.isArray((input as Workspace).items))return false;const date=(v:unknown)=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v))&&new Date(v+'T12:00:00Z').toISOString().slice(0,10)===v;const amount=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=9999999;const ids=new Set();return (input as Workspace).items.length<=1000&&(input as Workspace).items.every(i=>{if(typeof i.id!=='string'||ids.has(i.id))return false;ids.add(i.id);return typeof i.name==='string'&&i.name.length>0&&i.name.length<=100&&['subscription','bill'].includes(i.kind)&&/^#[0-9a-f]{6}$/i.test(i.color)&&typeof i.notes==='string'&&typeof i.variable==='boolean'&&Array.isArray(i.periods)&&Array.isArray(i.savings)&&Array.isArray(i.payments)&&i.periods.every(p=>typeof p.id==='string'&&date(p.start)&&(p.end===null||(date(p.end)&&p.end>p.start))&&amount(p.amount)&&['monthly','annual'].includes(p.cycle)&&Number.isInteger(p.day)&&p.day>=1&&p.day<=31&&typeof p.card==='string')&&i.savings.every(s=>typeof s.id==='string'&&date(s.from)&&date(s.anchor)&&(s.to===null||(date(s.to)&&s.to>=s.from))&&amount(s.amount)&&['monthly','annual'].includes(s.cycle)&&Number.isInteger(s.day)&&s.day>=1&&s.day<=31)&&i.payments.every(p=>typeof p.id==='string'&&date(p.due)&&date(p.date)&&amount(p.amount)&&typeof p.card==='string'&&typeof p.note==='string'&&['paid','pending','skipped'].includes(p.status))});}

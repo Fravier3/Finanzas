@@ -1,1 +1,42 @@
-# Finanzas\n\nAplicación de finanzas personales para iPhone. Proyecto en construcción; el código completo se publica en el siguiente commit.
+# Finanzas
+
+App web para iPhone y escritorio, en español y USD. Suscripciones, pagos recurrentes variables, ahorro por cancelación y resumen anual con gráficos. Se puede añadir a la pantalla de inicio desde Safari.
+
+## Uso
+
+1. Crear una cuenta con el mismo correo de la cuenta propietaria de Supabase y confirmar el correo; después iniciar sesión. El servicio SMTP gratuito de Supabase solo envía a miembros de la organización. Para permitir otras direcciones debe configurarse un SMTP propio; no se desactivó la confirmación de correo.
+2. Añadir servicios con importe, tarjeta (solo el nombre), frecuencia, fecha inicial y día de cobro.
+3. Los cargos del calendario son **previstos**, no transacciones bancarias. Para contarlos como pagados, confirmar individualmente o confirmar los cargos vencidos. Al crear un servicio, hay una casilla opcional para confirmar los pagos anteriores del año elegido.
+4. Un pago puede corregirse en cantidad, fecha prevista, fecha real, tarjeta, nota y estado. El total anual usa **la fecha real del pago**, hasta el mes seleccionado o hasta hoy si ese mes aún no ha terminado.
+5. Los recibos variables permiten registrar un importe distinto cada mes. «Cambiar tarifa» comienza un calendario nuevo sin modificar los pagos confirmados anteriores.
+6. «Ahorrar» registra una cancelación hecha con el proveedor. Conserva el historial y cuenta los cargos evitados desde la fecha efectiva. Reactivar cierra ese período de ahorro.
+7. El costo mensual es equivalente: los cargos anuales se dividen entre 12. El ahorro acumulado por una suscripción anual aparece cuando se evita su renovación, no cada mes.
+8. En «Mi cuenta» se exportan CSV y respaldos JSON. Importar reemplaza el espacio actual, con confirmación.
+
+## Datos y seguridad
+
+Supabase Auth con correo/contraseña. Cada usuario tiene un documento JSON privado en `public.finance_workspaces`, protegido por RLS y acceso por `auth.uid()`. El documento guarda servicios, calendarios de tarifas, períodos de ahorro y pagos independientes. El guardado usa una revisión optimista para evitar sobrescribir cambios de otro dispositivo; si hay conflicto, actualizar y repetir la edición.
+
+Solo se incluye una clave **publicable** en el navegador. No hay números de tarjeta, contraseñas guardadas por la app ni claves `service_role`. Las sesiones las administra Supabase. El service worker no almacena respuestas financieras. Se requiere conexión para cargar y guardar; la demostración es temporal y no guarda información en la cuenta.
+
+El esquema completo está en `supabase/schema.sql`, ya aplicado al proyecto **Finanzas**. No ejecutar sobre una base existente con la misma tabla.
+
+## Desarrollo
+
+- React 19, TypeScript, Vinext/Vite, Recharts, Lucide y Supabase JS (versión exacta).
+- Node 22.13 o superior y pnpm con el lockfile incluido.
+- `pnpm install --frozen-lockfile`
+- `pnpm dev`
+- `pnpm build`
+- `node --experimental-strip-types tests/finance.test.mjs`
+- `node node_modules/typescript/bin/tsc --noEmit`
+
+El hosting Sites usa `.openai/hosting.json`. El mismo proyecto está publicado de forma privada para el propietario en ChatGPT; Supabase protege además los datos por cuenta. No añadir secretos al repositorio público.
+
+## Validación
+
+Pruebas de calendarios mensuales y anuales, fin de mes, febrero bisiesto, importes variables, cambios de tarifa, cancelación, reactivación, renovación anual evitada, pagos entre años y validación de importación. Compilación de producción y revisión de seguridad de Supabase.
+
+## Limitaciones
+
+No se conecta a bancos, no cobra ni cancela servicios con proveedores, y no envía recordatorios push. Los próximos pagos se calculan al abrir la app. El ahorro es un cálculo de cargos evitados; no implica que ese dinero se haya transferido a una cuenta bancaria.

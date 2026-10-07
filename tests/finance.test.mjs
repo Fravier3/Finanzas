@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {dates,charges,actualPayments,saved,monthly,savingMonthly,validWorkspace} from '../lib/finance.ts';
+const p={id:'p',start:'2026-01-31',end:null,amount:20,cycle:'monthly',day:31,card:'Chase'};
+const i={id:'i',name:'Servicio',kind:'subscription',color:'#315cf5',variable:false,notes:'',periods:[p],savings:[],payments:[]};
+assert.equal(dates(p,2026)[1],'2026-02-28');assert.equal(dates({...p,start:'2024-01-31'},2024)[1],'2024-02-29');
+assert.deepEqual(dates({...p,cycle:'annual'},2026),['2026-01-31']);
+assert.equal(charges(i,2026).length,12);assert.equal(actualPayments([i],2026,'2026-10-07').length,0);
+const paid={id:'x',due:'2026-02-28',date:'2026-03-02',amount:31.12,card:'Otra',status:'paid',note:''};
+const edited={...i,payments:[paid]};assert.equal(charges(edited,2026)[1].amount,31.12);assert.equal(actualPayments([edited],2026,'2026-03-01').length,0);assert.equal(actualPayments([edited],2026,'2026-03-02')[0].amount,31.12);
+assert.equal(charges({...edited,periods:[{...p,amount:40}]},2026)[1].amount,31.12);
+const canceled={...edited,periods:[{...p,end:'2026-06-01'}],savings:[{id:'s',from:'2026-06-01',to:null,amount:20,cycle:'monthly',day:31,anchor:p.start}]};
+assert.equal(charges(canceled,2026).length,5);assert.equal(monthly(canceled,'2026-10-01'),0);assert.equal(saved(canceled,2026,'2026-10-07'),80);assert.equal(savingMonthly(canceled,'2026-10-01'),20);
+const resumed={...canceled,periods:[...canceled.periods,{...p,id:'p2',start:'2026-09-01'}],savings:[{...canceled.savings[0],to:'2026-09-01'}]};assert.equal(saved(resumed,2026,'2026-12-31'),60);assert.equal(charges(resumed,2026).length,9);
+const annualCanceled={...i,periods:[{...p,cycle:'annual',end:'2026-06-01'}],savings:[{...canceled.savings[0],cycle:'annual'}]};assert.equal(saved(annualCanceled,2026,'2026-12-31'),0);assert.equal(saved(annualCanceled,2027,'2027-02-01'),20);
+const crossYear={...i,payments:[{...paid,due:'2025-12-31',date:'2026-01-02'}]};assert.equal(actualPayments([crossYear],2026,'2026-01-03').length,1);
+assert.equal(validWorkspace({items:[i]}),true);assert.equal(validWorkspace({items:[{...i,periods:[{...p,amount:-1}]}]}),false);assert.equal(validWorkspace({items:[{...i,periods:[{...p,start:'2026-02-31'}]}]}),false);
+console.log('14 escenarios financieros verificados: fechas, pagos reales, cambios de precio, ahorro, reactivación y años cruzados.');
