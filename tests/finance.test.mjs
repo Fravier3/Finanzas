@@ -73,3 +73,33 @@ const reactivated={...sameDayCancellation,savings:[{...sameDayCancellation.savin
 assert.equal(savingsOutlook([reactivated],'2026-10-07').total,12.99);
 assert.equal(savingsOutlook([annualSameDay],'2026-10-07').total,120);
 console.log('Desglose histórico, próximos cobros anuales y proyección de ahorro verificados.');
+const {updateSavingsAccount,accountBalance,accountContributions,accountMonthly,nextContribution}=await import('../lib/finance.ts');
+const fields={name:'Cuenta de prueba',color:'#16a684',notes:'',balance:453,monthly:100,next:'2026-11-08',day:8};
+const account=updateSavingsAccount(undefined,fields,'2026-10-08');
+assert.equal(validWorkspace({items:[],savingsAccounts:[account]}),true);
+assert.equal(validWorkspace({items:[i]}),true); // old backups still work
+assert.equal(accountBalance(account,'2026-10-08'),453);
+assert.equal(accountBalance(account,'2026-11-07'),453);
+assert.equal(accountBalance(account,'2026-11-08'),553);
+assert.equal(accountBalance(account,'2027-01-08'),753);
+assert.equal(accountBalance(account,'2027-10-08'),1653);
+assert.equal(accountBalance(account,'2026-10-07'),null);
+assert.equal(accountBalance(account,'2026-11-08'),553); // repeated calculation is idempotent
+assert.equal(accountMonthly(account,'2026-10-08'),100);
+assert.equal(nextContribution(account,'2026-12-09').date,'2027-01-08');
+const corrected=updateSavingsAccount(account,{...fields,balance:500,monthly:50,next:'2026-12-08'},'2026-11-08');
+assert.equal(accountBalance(corrected,'2026-11-07'),453);
+assert.equal(accountBalance(corrected,'2026-11-08'),500);
+assert.equal(accountBalance(corrected,'2026-12-08'),550);
+assert.equal(accountMonthly(corrected,'2026-11-08'),50);
+assert.equal(validWorkspace({items:[i],savingsAccounts:[corrected]}),true);
+const paused=updateSavingsAccount(corrected,{...fields,balance:520,monthly:0,next:'2027-01-08'},'2026-12-08');
+assert.equal(accountBalance(paused,'2027-12-08'),520);
+assert.equal(nextContribution(paused,'2026-12-08'),undefined);
+assert.equal(validWorkspace({items:[],savingsAccounts:[{...account,snapshots:[{id:'bad',date:'2026-02-31',amount:20}]}]}),false);
+assert.equal(validWorkspace({items:[],savingsAccounts:[{...account,plans:[...account.plans,{...account.plans[0],id:'duplicate'}]}]}),false);
+const monthEnd=updateSavingsAccount(undefined,{...fields,next:'2027-01-31',day:31},'2027-01-01');
+assert.deepEqual(accountContributions(monthEnd,'2027-01-01','2027-03-31').map(p=>p.date),['2027-01-31','2027-02-28','2027-03-31']);
+assert.throws(()=>updateSavingsAccount(undefined,{...fields,next:'2026-10-08'},'2026-10-08'),/posterior/);
+assert.equal(validWorkspace(JSON.parse(JSON.stringify({items:[i],savingsAccounts:[corrected]}))),true);
+console.log('Cuentas de ahorro: saldo base, meses sin abrir, correcciones, pausa, cambio de año y respaldo verificados.');
