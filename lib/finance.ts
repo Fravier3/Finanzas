@@ -18,6 +18,16 @@ export function charges(item:Item,year:number):Charge[]{const map=new Map<string
 export function paidThrough(items:Item[],year:number,cutoff:string){return items.flatMap(i=>charges(i,year)).filter(p=>p.status==='paid'&&p.date<=cutoff&&Number(p.date.slice(0,4))===year);}
 // Payments can be posted in a different year from their scheduled due date.
 export function actualPayments(items:Item[],year:number,cutoff:string){return items.flatMap(i=>i.payments.filter(p=>p.status==='paid'&&Number(p.date.slice(0,4))===year&&p.date<=cutoff).map(p=>({...p,itemId:i.id,name:i.name,kind:i.kind,color:i.color,estimated:false})));}
+// The spending summary reads expense records only. Savings account balances,
+// contributions and avoided charges are never inputs to an expense total.
+export function expenseSummary(workspace:Workspace,year:number,cutoff:string){
+ const items=workspace.items.filter(i=>i.kind==='subscription'||i.kind==='bill');
+ const paid=actualPayments(items,year,cutoff);
+ const subscriptions=sum(paid.filter(p=>p.kind==='subscription').map(p=>p.amount));
+ const bills=sum(paid.filter(p=>p.kind==='bill').map(p=>p.amount));
+ const details=items.map(i=>({...i,paid:sum(paid.filter(p=>p.itemId===i.id).map(p=>p.amount)),count:paid.filter(p=>p.itemId===i.id).length})).filter(i=>i.count>0).sort((a,b)=>b.paid-a.paid);
+ return {paid,subscriptions,bills,total:sum([subscriptions,bills]),details};
+}
 export function currentPeriod(i:Item,date=today()){return [...i.periods].reverse().find(p=>p.start<=date&&(!p.end||date<p.end));}
 export function monthly(i:Item,date=today()){const p=currentPeriod(i,date);return p?p.amount/(p.cycle==='annual'?12:1):0;}
 export function savingDates(s:Saving,year:number){return dates({id:s.id,start:s.anchor,end:s.to,amount:s.amount,cycle:s.cycle,day:s.day,card:''},year).filter(d=>d>=s.from);}

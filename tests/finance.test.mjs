@@ -113,3 +113,12 @@ assert.equal(totalSavingsBalance([{...deletedAccount,deletedAt:undefined}],'2026
 assert.equal(totalSavingsBalance([account,{...account,id:'second',snapshots:[{id:'second-base',date:'2026-10-08',amount:47}],plans:[]}],'2026-10-08'),500);
 assert.equal(validWorkspace({items:[],savingsAccounts:[{...account,deletedAt:'invalid'}]}),false);
 console.log('Total actual sin aportes futuros, cuentas eliminadas y restauración verificados.');
+const {expenseSummary}=await import('../lib/finance.ts');
+const expenseWorkspace={items:[edited,{...edited,id:'bill',kind:'bill',payments:[{...paid,amount:80}]}],savingsAccounts:[account]};
+const expenseTotals=expenseSummary(expenseWorkspace,2026,'2026-10-08');
+assert.equal(expenseTotals.subscriptions,31.12);assert.equal(expenseTotals.bills,80);assert.equal(expenseTotals.total,111.12);
+assert.equal(expenseTotals.details.reduce((n,i)=>n+i.count,0),2);
+assert.equal(expenseSummary({...expenseWorkspace,savingsAccounts:[{...account,snapshots:[{...account.snapshots[0],amount:9000000}],plans:[{...account.plans[0],amount:100000}]}]},2026,'2026-10-08').total,111.12);
+assert.equal(expenseSummary({items:[{...canceled,payments:[]}],savingsAccounts:[account]},2026,'2026-10-08').total,0);
+assert.equal(expenseSummary(expenseWorkspace,2026,'2026-03-01').total,0);
+console.log('Resumen de gastos separado de saldos, aportes futuros y gasto evitado verificado.');
