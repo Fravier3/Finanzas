@@ -103,3 +103,13 @@ assert.deepEqual(accountContributions(monthEnd,'2027-01-01','2027-03-31').map(p=
 assert.throws(()=>updateSavingsAccount(undefined,{...fields,next:'2026-10-08'},'2026-10-08'),/posterior/);
 assert.equal(validWorkspace(JSON.parse(JSON.stringify({items:[i],savingsAccounts:[corrected]}))),true);
 console.log('Cuentas de ahorro: saldo base, meses sin abrir, correcciones, pausa, cambio de año y respaldo verificados.');
+const {totalSavingsBalance}=await import('../lib/finance.ts');
+const deletedAccount={...account,deletedAt:'2026-10-08'};
+assert.equal(validWorkspace({items:[i],savingsAccounts:[deletedAccount]}),true);
+assert.equal(totalSavingsBalance([account],'2026-10-08'),453);
+assert.equal(totalSavingsBalance([account],'2026-11-08'),553);
+assert.equal(totalSavingsBalance([deletedAccount],'2026-11-08'),0);
+assert.equal(totalSavingsBalance([{...deletedAccount,deletedAt:undefined}],'2026-11-08'),553);
+assert.equal(totalSavingsBalance([account,{...account,id:'second',snapshots:[{id:'second-base',date:'2026-10-08',amount:47}],plans:[]}],'2026-10-08'),500);
+assert.equal(validWorkspace({items:[],savingsAccounts:[{...account,deletedAt:'invalid'}]}),false);
+console.log('Total actual sin aportes futuros, cuentas eliminadas y restauración verificados.');

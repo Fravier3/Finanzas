@@ -4,7 +4,7 @@ export type Saving = {id:string; from:string; to:string|null; amount:number; cyc
 export type Item = {id:string; name:string; kind:'subscription'|'bill'; color:string; notes:string; variable:boolean; periods:Period[]; savings:Saving[]; payments:Payment[]};
 export type SavingsSnapshot = {id:string;date:string;amount:number};
 export type SavingsPlan = {id:string;start:string;end:string|null;amount:number;day:number};
-export type SavingsAccount = {id:string;name:string;color:string;notes:string;snapshots:SavingsSnapshot[];plans:SavingsPlan[]};
+export type SavingsAccount = {id:string;name:string;color:string;notes:string;snapshots:SavingsSnapshot[];plans:SavingsPlan[];deletedAt?:string};
 export type Workspace = {items:Item[];savingsAccounts?:SavingsAccount[]};
 export type Charge = Payment & {itemId:string; name:string; kind:Item['kind']; color:string; estimated:boolean};
 export const months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -72,6 +72,9 @@ export function accountBalance(a:SavingsAccount,asOf=today()):number|null{
  const base=[...a.snapshots].filter(s=>s.date<=asOf).sort((a,b)=>b.date.localeCompare(a.date))[0];
  return base?sum([base.amount,...accountContributions(a,base.date,asOf).map(p=>p.amount)]):null;
 }
+export function totalSavingsBalance(accounts:SavingsAccount[],asOf=today()){
+ return sum(accounts.filter(a=>!a.deletedAt).map(a=>accountBalance(a,asOf)??0));
+}
 export function accountMonthly(a:SavingsAccount,asOf=today()){
  // Upcoming plans are included in the monthly commitment, before their first deposit.
  return a.plans.find(p=>!p.end||asOf<p.end)?.amount??0;
@@ -94,7 +97,7 @@ export function validSavingsAccounts(value:unknown):value is SavingsAccount[]|un
  const amount=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=9999999;
  const ids=new Set<string>();
  return value.every(a=>{if(!a||typeof a.id!=='string'||ids.has(a.id))return false;ids.add(a.id);
-  if(typeof a.name!=='string'||!a.name.trim()||a.name.length>100||!/^#[0-9a-f]{6}$/i.test(a.color)||typeof a.notes!=='string'||a.notes.length>2000||!Array.isArray(a.snapshots)||!a.snapshots.length||a.snapshots.length>5000||!Array.isArray(a.plans)||a.plans.length>5000)return false;
+  if(typeof a.name!=='string'||!a.name.trim()||a.name.length>100||!/^#[0-9a-f]{6}$/i.test(a.color)||typeof a.notes!=='string'||a.notes.length>2000||(a.deletedAt!==undefined&&!date(a.deletedAt))||!Array.isArray(a.snapshots)||!a.snapshots.length||a.snapshots.length>5000||!Array.isArray(a.plans)||a.plans.length>5000)return false;
   if(!a.snapshots.every((s:SavingsSnapshot)=>s&&typeof s.id==='string'&&date(s.date)&&amount(s.amount))||new Set(a.snapshots.map((s:SavingsSnapshot)=>s.date)).size!==a.snapshots.length)return false;
   if(!a.plans.every((p:SavingsPlan)=>p&&typeof p.id==='string'&&date(p.start)&&(p.end===null||(date(p.end)&&p.end>p.start))&&amount(p.amount)&&Number.isInteger(p.day)&&p.day>=1&&p.day<=31))return false;
   const sorted=[...a.plans].sort((a,b)=>a.start.localeCompare(b.start));
