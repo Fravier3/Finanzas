@@ -61,3 +61,15 @@ assert.equal(options.rp.id,'fravier3.github.io');assert.deepEqual([...new Uint8A
 assert.equal(options.authenticatorSelection.authenticatorAttachment,'platform');assert.equal(options.authenticatorSelection.residentKey,'required');assert.equal(options.authenticatorSelection.userVerification,'required');
 assert.equal(encodeBase64url(options.excludeCredentials[0].id),'BwgJ');assert.equal(encodeBase64url(decodeBase64url('AQID_w')),'AQID_w');
 console.log('Pruebas verificadas: finanzas, cancelación, sesión conservada al cambiar de app/bfcache, cierre real y opciones de clave del dispositivo.');
+// Synthetic data checks: canceled spending remains in history, not commitment.
+const {spendingBreakdown,nextCharge,savingsOutlook}=await import('../lib/finance.ts');
+const annual={...i,id:'annual',periods:[{...p,cycle:'annual',start:'2026-04-11',day:11,amount:120}],payments:[{...paid,due:'2026-04-11',date:'2026-04-11',amount:120}]};
+const summary=spendingBreakdown([annual,sameDayCancellation],2026,'2026-10-07','2026-10-07');
+assert.equal(summary.activePaid,120);assert.equal(summary.inactivePaid,12.99);assert.equal(summary.total,132.99);
+assert.equal(nextCharge(annual,'2026-10-07').due,'2027-04-11');
+assert.equal(nextCharge(sameDayCancellation,'2026-10-07'),undefined);
+const forecast=savingsOutlook([sameDayCancellation],'2026-10-07');assert.equal(forecast.next.due,'2026-11-07');assert.equal(forecast.total,155.88);
+const reactivated={...sameDayCancellation,savings:[{...sameDayCancellation.savings[0],to:'2026-12-01'}]};
+assert.equal(savingsOutlook([reactivated],'2026-10-07').total,12.99);
+assert.equal(savingsOutlook([annualSameDay],'2026-10-07').total,120);
+console.log('Desglose histórico, próximos cobros anuales y proyección de ahorro verificados.');

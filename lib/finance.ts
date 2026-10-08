@@ -30,3 +30,30 @@ export function cancelSubscription(item:Item,from:string,amount:number,now=today
 export function savingMonthly(i:Item,date=today()){const s=i.savings.find(s=>s.from<=date&&(!s.to||date<s.to));return s?s.amount/(s.cycle==='annual'?12:1):0;}
 export function isSaving(i:Item){return i.savings.some(s=>!s.to);}
 export function validWorkspace(input:unknown):input is Workspace{if(!input||typeof input!=='object'||!Array.isArray((input as Workspace).items))return false;const date=(v:unknown)=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v))&&new Date(v+'T12:00:00Z').toISOString().slice(0,10)===v;const amount=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=9999999;const ids=new Set();return (input as Workspace).items.length<=1000&&(input as Workspace).items.every(i=>{if(typeof i.id!=='string'||ids.has(i.id))return false;ids.add(i.id);return typeof i.name==='string'&&i.name.length>0&&i.name.length<=100&&['subscription','bill'].includes(i.kind)&&/^#[0-9a-f]{6}$/i.test(i.color)&&typeof i.notes==='string'&&typeof i.variable==='boolean'&&Array.isArray(i.periods)&&Array.isArray(i.savings)&&Array.isArray(i.payments)&&i.periods.every(p=>typeof p.id==='string'&&date(p.start)&&(p.end===null||(date(p.end)&&p.end>p.start))&&amount(p.amount)&&['monthly','annual'].includes(p.cycle)&&Number.isInteger(p.day)&&p.day>=1&&p.day<=31&&typeof p.card==='string')&&i.savings.every(s=>typeof s.id==='string'&&date(s.from)&&date(s.anchor)&&(s.to===null||(date(s.to)&&s.to>=s.from))&&amount(s.amount)&&['monthly','annual'].includes(s.cycle)&&Number.isInteger(s.day)&&s.day>=1&&s.day<=31)&&i.payments.every(p=>typeof p.id==='string'&&date(p.due)&&date(p.date)&&amount(p.amount)&&typeof p.card==='string'&&typeof p.note==='string'&&['paid','pending','skipped'].includes(p.status))});}
+
+// Keep historical spending separate from today's commitments.
+export function spendingBreakdown(items:Item[],year:number,cutoff:string,now=today()){
+ const active=items.filter(i=>!!currentPeriod(i,now)&&!isSaving(i));
+ const activeIds=new Set(active.map(i=>i.id));
+ const payments=actualPayments(items,year,cutoff);
+ const activePaid=sum(payments.filter(p=>activeIds.has(p.itemId)).map(p=>p.amount));
+ const inactivePaid=sum(payments.filter(p=>!activeIds.has(p.itemId)).map(p=>p.amount));
+ return {activePaid,inactivePaid,total:sum([activePaid,inactivePaid]),inactive:items.filter(i=>!activeIds.has(i.id))};
+}
+export function nextCharge(i:Item,from=today()){
+ const year=Number(from.slice(0,4));
+ const firstStart=i.periods.filter(p=>!p.end||p.end>=from).map(p=>Number(p.start.slice(0,4)));
+ const years=new Set([year,year+1,...firstStart]);
+ return [...years].flatMap(y=>charges(i,y)).filter(p=>p.status==='pending'&&p.due>=from).sort((a,b)=>a.due.localeCompare(b.due))[0];
+}
+export function avoidedCharges(i:Item,from:string,to:string){
+ const paid=new Set(i.payments.filter(p=>p.status==='paid').map(p=>p.due));
+ const years=Array.from({length:Math.max(0,Number(to.slice(0,4))-Number(from.slice(0,4))+1)},(_,k)=>Number(from.slice(0,4))+k);
+ return i.savings.flatMap(s=>years.flatMap(y=>savingDates(s,y)).filter(d=>d>=from&&d<=to&&!paid.has(d)).map(d=>({itemId:i.id,name:i.name,due:d,amount:s.amount}))).sort((a,b)=>a.due.localeCompare(b.due));
+}
+export function savingsOutlook(items:Item[],now=today()){
+ const year=Number(now.slice(0,4));
+ const end=dateFor(year+1,Number(now.slice(5,7))-1,Number(now.slice(8,10)));
+ const future=items.flatMap(i=>avoidedCharges(i,now,end)).filter(p=>p.due>now).sort((a,b)=>a.due.localeCompare(b.due));
+ return {next:future[0],charges:future,total:sum(future.map(p=>p.amount))};
+}
