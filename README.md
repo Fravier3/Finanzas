@@ -46,4 +46,12 @@ Pruebas de calendarios mensuales y anuales, fin de mes, febrero bisiesto, import
 
 ## Limitaciones
 
+### Actividad diaria automática
+
+La tarea `.github/workflows/daily-activity.yml` se ejecuta diariamente a las **05:17 a.m. de Puerto Rico** (09:17 UTC), también al publicar cambios en esa tarea y manualmente desde Actions. Hace tres consultas pequeñas mediante `scripts/daily-activity.mjs`, sin abrir la app ni iniciar sesión.
+
+La función `finance_daily_activity()` actualiza una única fecha de servidor en `finanzas_internal.daily_activity`, una vez al día, y devuelve la fecha para verificarla. La tabla está fuera de los esquemas expuestos por REST, tiene RLS y permisos limitados. La función usa SECURITY INVOKER; su clave publicable no permite leer ni modificar registros financieros. El SQL aplicado está en `supabase/daily-activity.sql`.
+
+Esto genera actividad, pero no garantiza que Supabase nunca pause un proyecto gratuito. GitHub puede retrasar tareas programadas y deshabilita los horarios de repositorios públicos después de 60 días sin actividad; si sucede, reactivar el workflow en Actions. Los errores quedan visibles en la ejecución de Actions. No se contratan servicios ni planes adicionales.
+
 No se conecta a bancos, no cobra ni cancela servicios con proveedores, y no envía recordatorios push. Los próximos pagos se calculan al abrir la app. El ahorro es un cálculo de cargos evitados; no implica que ese dinero se haya transferido a una cuenta bancaria.

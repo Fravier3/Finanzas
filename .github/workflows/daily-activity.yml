@@ -1,0 +1,27 @@
+name: Actividad diaria de Finanzas
+on:
+  schedule:
+    # 05:17 a.m. Puerto Rico (UTC-4). GitHub may delay scheduled runs.
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/daily-activity.yml'
+      - 'scripts/daily-activity.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: finance-daily-activity
+  cancel-in-progress: false
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Actualizar fecha interna y comprobar actividad
+        run: node scripts/daily-activity.mjs
